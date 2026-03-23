@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电池回收产出物定价工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 14px; background: #F5F4EF; color: #2C2C2A; line-height: 1.6; }
+  .header { background: #1F4E79; color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header .sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .date-badge { font-size: 12px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; }
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 52px); }
+  .sidebar { background: #fff; border-right: 1px solid #E0DED6; overflow-y: auto; }
+  .sidebar-section { border-bottom: 1px solid #F0EEE8; padding: 14px 16px; }
+  .sidebar-section h2 { font-size: 11px; font-weight: 700; color: #888780; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .field { margin-bottom: 9px; }
+  .field label { display: block; font-size: 12px; color: #5F5E5A; margin-bottom: 3px; }
+  .field input[type="number"] { width: 100%; padding: 5px 8px; border: 1px solid #D3D1C7; border-radius: 4px; font-size: 13px; color: #2C2C2A; background: #FAFAF8; }
+  .field input[type="number"]:focus { outline: none; border-color: #1F4E79; background: #fff; }
+  .field .unit { font-size: 11px; color: #888780; margin-top: 2px; }
+  .slider-field { margin-bottom: 10px; }
+  .slider-field label { display: flex; justify-content: space-between; font-size: 12px; color: #5F5E5A; margin-bottom: 3px; }
+  .slider-field label span { font-weight: 700; color: #1F4E79; }
+  input[type="range"] { width: 100%; height: 4px; accent-color: #1F4E79; }
+  .tab-bar { display: flex; border-bottom: 1px solid #E0DED6; background: #FAFAF8; }
+  .tab { flex: 1; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #888780; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: #1F4E79; border-bottom-color: #1F4E79; background: #fff; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .btn { width: 100%; padding: 8px; background: #1F4E79; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 4px; }
+  .btn:hover { background: #185FA5; }
+  .btn-secondary { background: #F0EEE8; color: #5F5E5A; margin-top: 5px; }
+  .btn-secondary:hover { background: #E0DED6; }
+  .btn-export { background: #2E7D32; margin-top: 5px; }
+  .btn-export:hover { background: #1B5E20; }
+  .main { padding: 18px; overflow-y: auto; }
+  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .card { background: #fff; border-radius: 6px; border: 1px solid #E0DED6; padding: 12px 14px; }
+  .card .clabel { font-size: 11px; color: #888780; margin-bottom: 3px; }
+  .card .value { font-size: 20px; font-weight: 700; color: #1F4E79; }
+  .card .value.green { color: #2E7D32; }
+  .card .value.orange { color: #C55A11; }
+  .card .value.red { color: #A32D2D; }
+  .card .value.purple { color: #534AB7; }
+  .card .csub { font-size: 11px; color: #888780; margin-top: 2px; }
+  .section { background: #fff; border-radius: 6px; border: 1px solid #E0DED6; margin-bottom: 14px; overflow: hidden; }
+  .section-header { padding: 10px 16px; border-bottom: 1px solid #F0EEE8; display: flex; align-items: center; justify-content: space-between; }
+  .section-header h3 { font-size: 13px; font-weight: 600; color: #2C2C2A; }
+  .section-body { padding: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: #888780; padding: 5px 10px; border-bottom: 2px solid #F0EEE8; }
+  td { padding: 7px 10px; border-bottom: 1px solid #F5F4EF; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #FAFAF8; }
+  .td-product { font-weight: 600; color: #2C2C2A; font-size: 12px; }
+  .td-logic { color: #5F5E5A; font-size: 11px; }
+  .price-tag { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 12px; font-weight: 600; }
+  .price-green { background: #EAF3DE; color: #27500A; }
+  .price-blue { background: #E5F0FA; color: #0C447C; }
+  .price-orange { background: #FEF3D8; color: #633806; }
+  .price-purple { background: #EEEDFE; color: #3C3489; }
+  .price-gray { background: #F5F4EF; color: #5F5E5A; }
+  .margin-bar { display: flex; align-items: center; gap: 5px; }
+  .bar-bg { flex: 1; height: 5px; background: #F0EEE8; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-wrap { position: relative; height: 210px; }
+  .history-table { max-height: 200px; overflow-y: auto; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+  .badge-new { background: #E5F0FA; color: #0C447C; }
+  .note { font-size: 11px; color: #888780; padding: 6px 16px 10px; border-top: 1px solid #F5F4EF; }
+  .warning { background: #FEF3D8; border-left: 3px solid #FAC775; padding: 7px 10px; font-size: 11px; color: #633806; border-radius: 0 4px 4px 0; margin-bottom: 10px; }
+  .info-box { background: #EEEDFE; border-left: 3px solid #AFA9EC; padding: 7px 10px; font-size: 11px; color: #3C3489; border-radius: 0 4px 4px 0; margin-bottom: 10px; }
+  .cbam-result { background: #EAF3DE; border-radius: 6px; padding: 12px 14px; margin-top: 10px; }
+  .cbam-result .row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #C0DD97; font-size: 12px; }
+  .cbam-result .row:last-child { border-bottom: none; font-weight: 700; font-size: 13px; }
+  .cbam-result .row span:last-child { font-weight: 600; color: #27500A; }
+  @media (max-width: 1100px) { .cards { grid-template-columns: repeat(3,1fr); } .chart-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .cards { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div style="font-size:15px;font-weight:600;color:#fff">电池回收产出物定价工具</div>
+    <div class="sub">半自动模型 · NCM/LFP黑粉 · CAM加工费 · rCAM直接修复 · CBAM碳关税</div>
+  </div>
+  <div class="date-badge" id="dateBadge"></div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('metals')">金属价格</div>
+      <div class="tab" onclick="switchTab('params')">成分参数</div>
+      <div class="tab" onclick="switchTab('advanced')">高级模块</div>
+    </div>
+
+    <div id="tab-metals" class="tab-panel active">
+      <div class="sidebar-section">
+        <h2>指数价格录入</h2>
+        <div class="warning">请参考 SMM / Fastmarkets / GFEX 当日报价手动录入</div>
+        <div class="field"><label>碳酸锂（电池级 99.5%）</label><input type="number" id="liPrice" value="145000" step="100"><div class="unit">元/吨 · 来源：GFEX期货 / SMM</div></div>
+        <div class="field"><label>硫酸镍（电池级）</label><input type="number" id="nisoPrice" value="27000" step="100"><div class="unit">元/吨 · 来源：SMM</div></div>
+        <div class="field"><label>硫酸钴（CoSO₄ 电池级）</label><input type="number" id="cosoPrice" value="52000" step="100"><div class="unit">元/吨 · 来源：SMM / Fastmarkets</div></div>
+        <div class="field"><label>LME镍（现货）</label><input type="number" id="lmeNiPrice" value="15800" step="10"><div class="unit">USD/吨 · 来源：LME官网</div></div>
+        <div class="field"><label>USD/CNY 汇率</label><input type="number" id="fxRate" value="7.24" step="0.01"><div class="unit">参考中国银行当日中间价</div></div>
+      </div>
+      <div class="sidebar-section">
+        <h2>成本参数（元/吨输入料）</h2>
+        <div class="field"><label>处理成本（OPEX）</label><input type="number" id="opexCost" value="11000" step="500"><div class="unit">湿法参考：约10,800–13,000元/吨</div></div>
+        <div class="field"><label>物流及合规成本</label><input type="number" id="logisticsCost" value="1500" step="100"></div>
+        <button class="btn" onclick="calculate();saveRecord()">计算并保存记录</button>
+        <button class="btn btn-secondary" onclick="calculate()">仅计算</button>
+        <button class="btn btn-export" onclick="exportCSV()">导出 CSV</button>
+      </div>
+    </div>
+
+    <div id="tab-params" class="tab-panel">
+      <div class="sidebar-section">
+        <h2>黑粉成分（NCM）</h2>
+        <div class="slider-field"><label>镍含量 Ni%<span id="niPctLbl">32%</span></label><input type="range" id="niPct" min="10" max="50" value="32" oninput="document.getElementById('niPctLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>钴含量 Co%<span id="coPctLbl">6%</span></label><input type="range" id="coPct" min="2" max="20" value="6" oninput="document.getElementById('coPctLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>锂含量 Li%<span id="liPctLbl">6%</span></label><input type="range" id="liPct" min="2" max="12" value="6" oninput="document.getElementById('liPctLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>折扣系数 K (NCM)<span id="kPctLbl">78%</span></label><input type="range" id="kPct" min="50" max="110" value="78" oninput="document.getElementById('kPctLbl').textContent=this.value+'%';calculate()"></div>
+      </div>
+      <div class="sidebar-section">
+        <h2>黑粉成分（LFP）</h2>
+        <div class="slider-field"><label>锂含量 Li%<span id="lfpLiPctLbl">4.5%</span></label><input type="range" id="lfpLiPct" min="2" max="8" step="0.1" value="4.5" oninput="document.getElementById('lfpLiPctLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>每%锂单价（元）<span id="liPerPctLbl">3100</span></label><input type="range" id="liPerPct" min="1500" max="5000" step="50" value="3100" oninput="document.getElementById('liPerPctLbl').textContent=this.value;calculate()"></div>
+      </div>
+      <div class="sidebar-section">
+        <h2>回收率与溢价</h2>
+        <div class="slider-field"><label>锂回收率<span id="liRecoveryLbl">92%</span></label><input type="range" id="liRecovery" min="70" max="99" value="92" oninput="document.getElementById('liRecoveryLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>镍钴回收率<span id="nicoRecoveryLbl">98%</span></label><input type="range" id="nicoRecovery" min="80" max="99" value="98" oninput="document.getElementById('nicoRecoveryLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>绿色溢价率<span id="greenPremiumLbl">12%</span></label><input type="range" id="greenPremium" min="0" max="20" value="12" oninput="document.getElementById('greenPremiumLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="slider-field"><label>工业级折价率<span id="indDiscountLbl">12%</span></label><input type="range" id="indDiscount" min="5" max="20" value="12" oninput="document.getElementById('indDiscountLbl').textContent=this.value+'%';calculate()"></div>
+      </div>
+    </div>
+
+    <div id="tab-advanced" class="tab-panel">
+      <div class="sidebar-section">
+        <h2>前驱体 / CAM 加工费模式</h2>
+        <div class="info-box">客户供料，本方收取固定加工费；利润与金属价格波动脱钩</div>
+        <div class="field"><label>加工费单价（元/吨产出）</label><input type="number" id="tollingFee" value="8000" step="500"><div class="unit">参考区间：6,000–12,000元/吨</div></div>
+        <div class="slider-field"><label>约定金属收率<span id="tollingYieldLbl">96%</span></label><input type="range" id="tollingYield" min="85" max="99" value="96" oninput="document.getElementById('tollingYieldLbl').textContent=this.value+'%';calculate()"></div>
+        <div class="field"><label>月处理量（吨/月）</label><input type="number" id="tollingVolume" value="500" step="50"></div>
+        <div class="slider-field"><label>代工产能占比<span id="tollingShareLbl">35%</span></label><input type="range" id="tollingShare" min="0" max="100" value="35" oninput="document.getElementById('tollingShareLbl').textContent=this.value+'%';calculate()"><div style="font-size:11px;color:#888;margin-top:2px">建议投产首年30–40%产能做代工以保底</div></div>
+      </div>
+      <div class="sidebar-section">
+        <h2>rCAM 直接修复路线</h2>
+        <div class="info-box">商业化仍处早期，暂无公开基准价。以碳酸锂现货价为锚点乘以溢价倍数估算。待有公开报价后直接录入即可。</div>
+        <div class="slider-field"><label>碳酸锂溢价倍数<span id="rcamMultLbl">1.8×</span></label><input type="range" id="rcamMult" min="1.0" max="3.5" step="0.1" value="1.8" oninput="document.getElementById('rcamMultLbl').textContent=this.value+'×';calculate()"><div style="font-size:11px;color:#888;margin-top:2px">理论溢价区间1.5–2.5×（较湿法碳足迹降低约53%）</div></div>
+        <div class="slider-field"><label>直接修复成功率<span id="rcamYieldLbl">75%</span></label><input type="range" id="rcamYield" min="50" max="95" value="75" oninput="document.getElementById('rcamYieldLbl').textContent=this.value+'%';calculate()"><div style="font-size:11px;color:#888;margin-top:2px">未修复部分进入湿法路线</div></div>
+        <div style="font-size:11px;color:#854F0B;background:#FEF3D8;padding:6px 8px;border-radius:4px;margin-top:6px">待有公开报价时：将溢价倍数改为直接录入价格输入框，计算逻辑无需变动</div>
+      </div>
+      <div class="sidebar-section">
+        <h2>CBAM 碳边境调节机制</h2>
+        <div class="info-box">适用于向欧盟出口再生金属产品。2026年为正式征税第一年。</div>
+        <div class="field"><label>欧盟碳价（EU ETS）</label><input type="number" id="euCarbonPrice" value="63" step="1"><div class="unit">€/tCO₂ · 参考：EU ETS当日收盘价</div></div>
+        <div class="field"><label>EUR/CNY 汇率</label><input type="number" id="eurRate" value="7.85" step="0.01"></div>
+        <div class="slider-field"><label>湿法碳排放强度<span id="carbonIntensityLbl">4.2</span></label><input type="range" id="carbonIntensity" min="1.0" max="10.0" step="0.1" value="4.2" oninput="document.getElementById('carbonIntensityLbl').textContent=this.value;calculate()"><div style="font-size:11px;color:#888;margin-top:2px">tCO₂/t产品 · 湿法参考：3.5–5.0</div></div>
+        <div class="slider-field"><label>rCAM碳排放强度<span id="rcamCarbonLbl">2.0</span></label><input type="range" id="rcamCarbon" min="0.5" max="5.0" step="0.1" value="2.0" oninput="document.getElementById('rcamCarbonLbl').textContent=this.value;calculate()"><div style="font-size:11px;color:#888;margin-top:2px">tCO₂/t产品 · 较湿法降低约53%</div></div>
+        <div class="slider-field"><label>国内已付碳价<span id="cnCarbonLbl">80</span></label><input type="range" id="cnCarbon" min="0" max="200" step="5" value="80" oninput="document.getElementById('cnCarbonLbl').textContent=this.value;calculate()"><div style="font-size:11px;color:#888;margin-top:2px">元/tCO₂ · 可抵扣欧盟碳费 · 参考全国碳市场</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="cards">
+      <div class="card"><div class="clabel">NCM黑粉 建议收购价</div><div class="value" id="ncmBuyPrice">—</div><div class="csub">元/吨（含K折扣）</div></div>
+      <div class="card"><div class="clabel">LFP黑粉 建议收购价</div><div class="value orange" id="lfpBuyPrice">—</div><div class="csub">元/吨（按锂含量）</div></div>
+      <div class="card"><div class="clabel">CAM加工费 月度毛利润</div><div class="value green" id="tollingMonthly">—</div><div class="csub">元/月（按当前占比）</div></div>
+      <div class="card"><div class="clabel">rCAM 估算出售价</div><div class="value purple" id="rcamPrice">—</div><div class="csub">元/吨（溢价倍数估算）</div></div>
+      <div class="card"><div class="clabel">NCM湿法 综合利润率</div><div class="value" id="ncmMarginPct">—</div><div class="csub">产出价值 vs 总成本</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h3>产出物出售定价明细</h3><span style="font-size:11px;color:#888780">基于当前录入参数实时计算</span></div>
+      <div style="padding:0"><table>
+        <thead><tr><th style="width:20%">产出物</th><th style="width:13%">定价逻辑</th><th style="width:17%">基准价（元/吨）</th><th style="width:17%">含绿色溢价</th><th style="width:14%">工业级折价</th><th style="width:19%">利润空间</th></tr></thead>
+        <tbody id="outputTable"></tbody>
+      </table></div>
+      <div class="note">* 绿色溢价需持有 Battery Passport + 第三方LCA认证。rCAM为估算价，待公开基准价出现后更新倍数参数即可。</div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h3>CBAM 碳关税测算（出口至欧盟）</h3><span style="font-size:11px;color:#888780">参数在左侧「高级模块」调整</span></div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div><div style="font-size:12px;font-weight:600;color:#5F5E5A;margin-bottom:8px">湿法产品（硫酸镍/钴/碳酸锂）</div><div class="cbam-result" id="cbamHydro"></div></div>
+          <div><div style="font-size:12px;font-weight:600;color:#5F5E5A;margin-bottom:8px">rCAM 直接修复路线</div><div class="cbam-result" id="cbamRcam"></div></div>
+        </div>
+        <div style="font-size:11px;color:#888780;margin-top:10px">公式：CBAM税费 = 碳排放强度 × MAX(0, 欧盟碳价 − 国内已付碳价折算) × EUR/CNY汇率　单位：元/吨产品</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h3>前驱体 / CAM 加工费模式 — 收益测算</h3><span style="font-size:11px;color:#888780">参数在左侧「高级模块」调整</span></div>
+      <div class="section-body" id="tollingDetail"></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="section"><div class="section-header"><h3>各产出物价值贡献分布（NCM湿法）</h3></div><div class="section-body"><div class="chart-wrap"><canvas id="pieChart"></canvas></div></div></div>
+      <div class="section"><div class="section-header"><h3>NCM收购价敏感性（K值 × 锂价情景）</h3></div><div class="section-body"><div class="chart-wrap"><canvas id="sensitivityChart"></canvas></div></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h3>历史录入记录</h3><button onclick="clearHistory()" style="font-size:11px;color:#888;background:none;border:none;cursor:pointer;padding:2px 6px">清空记录</button></div>
+      <div class="history-table"><table>
+        <thead><tr><th>日期</th><th>碳酸锂(元/t)</th><th>硫酸镍(元/t)</th><th>硫酸钴(元/t)</th><th>NCM收购价</th><th>LFP收购价</th><th>NCM利润率</th><th>CBAM湿法(元/t)</th></tr></thead>
+        <tbody id="historyTable"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let pieChartInst=null, sensChartInst=null;
+document.getElementById('dateBadge').textContent=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+
+function switchTab(name) {
+  ['metals','params','advanced'].forEach((n,i)=>{ document.querySelectorAll('.tab')[i].classList.toggle('active',n===name); document.getElementById('tab-'+n).classList.toggle('active',n===name); });
+}
+function getVal(id){return parseFloat(document.getElementById(id).value)||0;}
+function getSlider(id){return parseFloat(document.getElementById(id).value)/100;}
+
+function calculate() {
+  const liPrice=getVal('liPrice'), nisoPrice=getVal('nisoPrice'), cosoPrice=getVal('cosoPrice');
+  const opex=getVal('opexCost'), logistics=getVal('logisticsCost'), totalCost=opex+logistics;
+  const niPct=getSlider('niPct'), coPct=getSlider('coPct'), liPct=getSlider('liPct'), kPct=getSlider('kPct');
+  const liRec=getSlider('liRecovery'), nicoRec=getSlider('nicoRecovery'), greenP=getSlider('greenPremium'), indDisc=getSlider('indDiscount');
+  const li2co3Conv=5.32, nisoConv=4.48, cosoConv=4.97;
+  const liValue=liPct*liRec*li2co3Conv*liPrice, niValue=niPct*nicoRec*nisoConv*nisoPrice, coValue=coPct*nicoRec*cosoConv*cosoPrice;
+  const totalOutputValue=liValue+niValue+coValue;
+  const ncmBuyPrice=Math.round(totalOutputValue*kPct-totalCost);
+  const ncmMarginPct=totalOutputValue>0?Math.round((totalOutputValue-totalCost)/totalOutputValue*100):0;
+  const lfpLiPct=parseFloat(document.getElementById('lfpLiPct').value);
+  const liPerPct=parseFloat(document.getElementById('liPerPct').value);
+  const lfpBuyPrice=Math.round(lfpLiPct*liPerPct);
+  const li2co3Sell=Math.round(liPrice*(1+greenP)), li2co3SellInd=Math.round(liPrice*(1-indDisc));
+  const nisoSell=Math.round(nisoPrice*(1+greenP)), nisoSellInd=Math.round(nisoPrice*(1-indDisc));
+  const cosoSell=Math.round(cosoPrice*(1+greenP)), cosoSellInd=Math.round(cosoPrice*(1-indDisc));
+
+  // CAM Tolling
+  const tollingFee=getVal('tollingFee'), tollingYield=getSlider('tollingYield');
+  const tollingVolume=getVal('tollingVolume'), tollingShare=getSlider('tollingShare');
+  const tollingEffVol=tollingVolume*tollingShare;
+  const tollingMonthly=Math.round(tollingFee*tollingEffVol);
+  const tollingRisk=tollingYield>=0.93?'收率达标':'⚠ 低于约定值，存在赔偿风险';
+
+  // rCAM
+  const rcamMult=parseFloat(document.getElementById('rcamMult').value);
+  const rcamYield=getSlider('rcamYield');
+  const rcamPrice=Math.round(liPrice*rcamMult);
+
+  // CBAM
+  const euCarbon=getVal('euCarbonPrice'), eurRate=getVal('eurRate');
+  const carbonIntensity=parseFloat(document.getElementById('carbonIntensity').value);
+  const rcamCarbon=parseFloat(document.getElementById('rcamCarbon').value);
+  const cnCarbon=getVal('cnCarbon');
+  const cnCarbonEur=cnCarbon/eurRate;
+  const netEuPrice=Math.max(0,euCarbon-cnCarbonEur);
+  const cbamHydro=Math.round(carbonIntensity*netEuPrice*eurRate);
+  const cbamRcamVal=Math.round(rcamCarbon*netEuPrice*eurRate);
+  const cbamSaving=cbamHydro-cbamRcamVal;
+
+  // Update cards
+  document.getElementById('ncmBuyPrice').textContent=ncmBuyPrice>0?ncmBuyPrice.toLocaleString():'—';
+  document.getElementById('lfpBuyPrice').textContent=lfpBuyPrice.toLocaleString();
+  document.getElementById('tollingMonthly').textContent=tollingMonthly>0?tollingMonthly.toLocaleString():'—';
+  document.getElementById('rcamPrice').textContent=rcamPrice.toLocaleString();
+  const mEl=document.getElementById('ncmMarginPct');
+  mEl.textContent=ncmMarginPct+'%';
+  mEl.className='value '+(ncmMarginPct>20?'green':ncmMarginPct>10?'':'red');
+
+  // Output table
+  const rows=[
+    {product:'黑粉 NCM（出售）',logic:'折扣系数法',base:Math.round(totalOutputValue*kPct).toLocaleString(),green:'▲ '+Math.round(totalOutputValue*kPct*(1+greenP*0.3)).toLocaleString(),ind:Math.round(totalOutputValue*kPct*0.9).toLocaleString(),margin:Math.min(100,Math.max(0,ncmMarginPct)),color:'blue'},
+    {product:'黑粉 LFP（出售）',logic:'按锂含量',base:lfpBuyPrice.toLocaleString(),green:'▲ '+Math.round(lfpBuyPrice*(1+greenP*0.2)).toLocaleString(),ind:Math.round(lfpBuyPrice*0.9).toLocaleString(),margin:40,color:'orange'},
+    {product:'碳酸锂 Li₂CO₃',logic:'现货市场',base:liPrice.toLocaleString(),green:'▲ '+li2co3Sell.toLocaleString(),ind:li2co3SellInd.toLocaleString(),margin:85,color:'green'},
+    {product:'硫酸镍 NiSO₄',logic:'溢价/折价',base:nisoPrice.toLocaleString(),green:'▲ '+nisoSell.toLocaleString(),ind:nisoSellInd.toLocaleString(),margin:55,color:'green'},
+    {product:'硫酸钴 CoSO₄',logic:'溢价/折价',base:cosoPrice.toLocaleString(),green:'▲ '+cosoSell.toLocaleString(),ind:cosoSellInd.toLocaleString(),margin:60,color:'green'},
+    {product:'前驱体/CAM（加工费）',logic:'Tolling',base:tollingFee.toLocaleString()+'元/t',green:'—',ind:'—',margin:70,color:'purple'},
+    {product:'rCAM 直接修复（估算）',logic:'溢价倍数法',base:rcamPrice.toLocaleString(),green:'▲ '+Math.round(rcamPrice*(1+greenP)).toLocaleString(),ind:'—',margin:Math.min(100,Math.round(rcamYield*90)),color:'purple'},
+  ];
+  const cmap={green:'price-green',blue:'price-blue',orange:'price-orange',purple:'price-purple'};
+  document.getElementById('outputTable').innerHTML=rows.map(r=>`<tr><td class="td-product">${r.product}</td><td class="td-logic">${r.logic}</td><td><span class="price-tag ${cmap[r.color]}">${r.base}</span></td><td><span class="price-tag price-green">${r.green}</span></td><td><span class="price-tag price-gray">${r.ind}</span></td><td><div class="margin-bar"><div class="bar-bg"><div class="bar-fill" style="width:${r.margin}%;background:${r.margin>40?'#639922':r.margin>20?'#BA7517':'#E24B4A'}"></div></div><span style="font-size:11px;color:#5F5E5A;min-width:26px">${r.margin}%</span></div></td></tr>`).join('');
+
+  // CBAM
+  document.getElementById('cbamHydro').innerHTML=`<div class="row"><span>碳排放强度</span><span>${carbonIntensity} tCO₂/t</span></div><div class="row"><span>欧盟碳价</span><span>€${euCarbon}/tCO₂</span></div><div class="row"><span>国内碳价抵扣（折欧元）</span><span>€${cnCarbonEur.toFixed(1)}/tCO₂</span></div><div class="row"><span>净应缴碳价</span><span>€${netEuPrice.toFixed(1)}/tCO₂</span></div><div class="row"><span>CBAM税费</span><span>${cbamHydro.toLocaleString()} 元/吨</span></div>`;
+  document.getElementById('cbamRcam').innerHTML=`<div class="row"><span>碳排放强度（rCAM）</span><span>${rcamCarbon} tCO₂/t</span></div><div class="row"><span>净应缴碳价</span><span>€${netEuPrice.toFixed(1)}/tCO₂</span></div><div class="row"><span>CBAM税费</span><span>${cbamRcamVal.toLocaleString()} 元/吨</span></div><div class="row"><span>较湿法节省碳税</span><span>${cbamSaving.toLocaleString()} 元/吨</span></div>`;
+
+  // Tolling detail
+  document.getElementById('tollingDetail').innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"><div style="background:#F5F4EF;padding:10px;border-radius:5px"><div style="font-size:11px;color:#888">加工费单价</div><div style="font-size:18px;font-weight:700;color:#534AB7">${tollingFee.toLocaleString()}</div><div style="font-size:11px;color:#888">元/吨产出</div></div><div style="background:#F5F4EF;padding:10px;border-radius:5px"><div style="font-size:11px;color:#888">代工处理量</div><div style="font-size:18px;font-weight:700;color:#534AB7">${Math.round(tollingEffVol).toLocaleString()}</div><div style="font-size:11px;color:#888">吨/月（${(tollingShare*100).toFixed(0)}%产能）</div></div><div style="background:#F5F4EF;padding:10px;border-radius:5px"><div style="font-size:11px;color:#888">月度加工费毛利</div><div style="font-size:18px;font-weight:700;color:#2E7D32">${tollingMonthly.toLocaleString()}</div><div style="font-size:11px;color:#888">元/月</div></div><div style="background:#F5F4EF;padding:10px;border-radius:5px"><div style="font-size:11px;color:#888">收率状态</div><div style="font-size:12px;font-weight:600;color:${tollingYield>=0.93?'#2E7D32':'#C55A11'};margin-top:6px">${tollingRisk}</div></div></div><div style="font-size:11px;color:#888780;margin-top:8px">注：加工费收入与金属价格波动无关；实际收率低于约定值须按当日市价赔偿差额，建议在LTA中明确允许偏差范围（通常±1%）。</div>`;
+
+  // Pie
+  if(pieChartInst) pieChartInst.destroy();
+  pieChartInst=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['碳酸锂','硫酸镍','硫酸钴'],datasets:[{data:[Math.round(liValue),Math.round(niValue),Math.round(coValue)],backgroundColor:['#B5D4F4','#9FE1CB','#FAC775'],borderColor:['#378ADD','#1D9E75','#EF9F27'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString()} 元`}}}}});
+
+  // Sensitivity
+  const kVals=[60,65,70,75,80,85,90,95,100];
+  const sensDatasets=[100000,130000,145000,160000,180000].map((lp,i)=>{
+    const colors=['#B5D4F4','#85B7EB','#378ADD','#185FA5','#042C53'];
+    const tot=liPct*liRec*li2co3Conv*lp+niPct*nicoRec*nisoConv*nisoPrice+coPct*nicoRec*cosoConv*cosoPrice;
+    return{label:`锂价${(lp/10000).toFixed(0)}万`,data:kVals.map(k=>Math.round(tot*k/100-totalCost)),borderColor:colors[i],backgroundColor:'transparent',borderWidth:i===2?2.5:1.5,pointRadius:i===2?3:2,tension:0.3};
+  });
+  if(sensChartInst) sensChartInst.destroy();
+  sensChartInst=new Chart(document.getElementById('sensitivityChart'),{type:'line',data:{labels:kVals.map(k=>k+'%'),datasets:sensDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:18}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} 元/t`}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>(v/10000).toFixed(0)+'万'},grid:{color:'#F0EEE8'}}}}});
+
+  return{liPrice,nisoPrice,cosoPrice,ncmBuyPrice,lfpBuyPrice,ncmMarginPct,cbamHydro};
+}
+
+function saveRecord(){
+  const r=calculate();
+  const history=JSON.parse(localStorage.getItem('batteryPricingHistory')||'[]');
+  history.unshift({date:new Date().toLocaleDateString('zh-CN'),liPrice:r.liPrice,nisoPrice:r.nisoPrice,cosoPrice:r.cosoPrice,ncmBuy:r.ncmBuyPrice,lfpBuy:r.lfpBuyPrice,margin:r.ncmMarginPct,cbam:r.cbamHydro});
+  if(history.length>60) history.pop();
+  localStorage.setItem('batteryPricingHistory',JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory(){
+  const history=JSON.parse(localStorage.getItem('batteryPricingHistory')||'[]');
+  if(!history.length){document.getElementById('historyTable').innerHTML='<tr><td colspan="8" style="text-align:center;color:#888;padding:18px">暂无记录，点击"计算并保存记录"开始</td></tr>';return;}
+  document.getElementById('historyTable').innerHTML=history.map((r,i)=>`<tr><td>${r.date}${i===0?' <span class="badge badge-new">最新</span>':''}</td><td>${r.liPrice?r.liPrice.toLocaleString():'—'}</td><td>${r.nisoPrice?r.nisoPrice.toLocaleString():'—'}</td><td>${r.cosoPrice?r.cosoPrice.toLocaleString():'—'}</td><td style="font-weight:600">${r.ncmBuy?r.ncmBuy.toLocaleString():'—'}</td><td>${r.lfpBuy?r.lfpBuy.toLocaleString():'—'}</td><td><span style="color:${r.margin>20?'#2E7D32':r.margin>10?'#C55A11':'#A32D2D'};font-weight:600">${r.margin}%</span></td><td>${r.cbam?r.cbam.toLocaleString():'—'}</td></tr>`).join('');
+}
+
+function clearHistory(){
+  if(confirm('确认清空所有历史记录？')){localStorage.removeItem('batteryPricingHistory');renderHistory();}
+}
+
+function exportCSV(){
+  const history=JSON.parse(localStorage.getItem('batteryPricingHistory')||'[]');
+  if(!history.length){alert('暂无记录可导出');return;}
+  const headers=['日期','碳酸锂(元/t)','硫酸镍(元/t)','硫酸钴(元/t)','NCM收购价(元/t)','LFP收购价(元/t)','NCM利润率(%)','CBAM湿法(元/t)'];
+  const rows=history.map(r=>[r.date,r.liPrice,r.nisoPrice,r.cosoPrice,r.ncmBuy,r.lfpBuy,r.margin,r.cbam||''].join(','));
+  const csv='\uFEFF'+[headers.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='电池回收定价记录_'+new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')+'.csv';
+  a.click();
+}
+
+document.querySelectorAll('input[type="number"]').forEach(el=>el.addEventListener('input',calculate));
+calculate();
+renderHistory();
+</script>
+</body>
+</html>
