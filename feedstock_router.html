@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>料源路径评估工具 · Feedstock Router</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;background:#F5F4EF;color:#2C2C2A;line-height:1.6;}
+.header{background:#1F4E79;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header-title{font-size:15px;font-weight:600;}
+.header-sub{font-size:11px;opacity:.7;margin-top:2px;}
+.lang-btn{font-size:11px;background:rgba(255,255,255,.15);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;}
+.layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 52px);}
+.sidebar{background:#fff;border-right:1px solid #E0DED6;overflow-y:auto;}
+.sb-section{border-bottom:1px solid #F0EEE8;padding:14px 16px;}
+.sb-section h2{font-size:11px;font-weight:700;color:#888780;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+.chip-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+.chip{padding:5px 10px;border-radius:20px;border:1.5px solid #D3D1C7;font-size:12px;cursor:pointer;background:#FAFAF8;color:#5F5E5A;transition:all .15s;}
+.chip.active{background:#1F4E79;border-color:#1F4E79;color:#fff;font-weight:600;}
+.chip:hover:not(.active){border-color:#1F4E79;color:#1F4E79;}
+.slider-field{margin-bottom:10px;}
+.slider-field label{display:flex;justify-content:space-between;font-size:12px;color:#5F5E5A;margin-bottom:3px;}
+.slider-field label span{font-weight:700;color:#1F4E79;}
+input[type=range]{width:100%;height:4px;accent-color:#1F4E79;}
+.field{margin-bottom:9px;}
+.field label{display:block;font-size:12px;color:#5F5E5A;margin-bottom:3px;}
+.field input[type=number]{width:100%;padding:5px 8px;border:1px solid #D3D1C7;border-radius:4px;font-size:13px;color:#2C2C2A;background:#FAFAF8;}
+.field input:focus{outline:none;border-color:#1F4E79;background:#fff;}
+.unit{font-size:11px;color:#888780;margin-top:2px;}
+.btn{width:100%;padding:9px;background:#1F4E79;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;margin-top:4px;}
+.btn:hover{background:#185FA5;}
+.btn-green{background:#2E7D32;margin-top:5px;}
+.btn-green:hover{background:#1B5E20;}
+.warning{background:#FEF3D8;border-left:3px solid #FAC775;padding:7px 10px;font-size:11px;color:#633806;border-radius:0 4px 4px 0;margin-bottom:10px;}
+.main{padding:18px;overflow-y:auto;}
+
+/* Recommendation banner */
+.rec-banner{border-radius:8px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;}
+.rec-banner.pathA{background:#E0F4ED;border:1.5px solid #5DCAA5;}
+.rec-banner.pathB{background:#E5F0FA;border:1.5px solid #85B7EB;}
+.rec-banner.pathC{background:#EAF3DE;border:1.5px solid #97C459;}
+.rec-banner.pathD{background:#FEF3D8;border:1.5px solid #FAC775;}
+.rec-badge{font-size:22px;font-weight:700;min-width:60px;text-align:center;}
+.rec-badge.pathA{color:#085041;}
+.rec-badge.pathB{color:#0C447C;}
+.rec-badge.pathC{color:#27500A;}
+.rec-badge.pathD{color:#633806;}
+.rec-text h3{font-size:14px;font-weight:600;color:#2C2C2A;margin-bottom:2px;}
+.rec-text p{font-size:12px;color:#5F5E5A;}
+.rec-reason{font-size:11px;margin-top:6px;padding:6px 10px;background:rgba(255,255,255,.6);border-radius:4px;color:#444441;}
+
+/* Path comparison table */
+.section{background:#fff;border-radius:6px;border:1px solid #E0DED6;margin-bottom:14px;overflow:hidden;}
+.section-header{padding:10px 16px;border-bottom:1px solid #F0EEE8;display:flex;align-items:center;justify-content:space-between;}
+.section-header h3{font-size:13px;font-weight:600;color:#2C2C2A;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;font-size:11px;font-weight:600;color:#888780;padding:6px 10px;border-bottom:2px solid #F0EEE8;}
+td{padding:7px 10px;border-bottom:1px solid #F5F4EF;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.recommended td{background:#F5FBFF;}
+tr:hover td{background:#FAFAF8;}
+.path-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;}
+.badgeA{background:#E0F4ED;color:#085041;}
+.badgeB{background:#E5F0FA;color:#0C447C;}
+.badgeC{background:#EAF3DE;color:#27500A;}
+.badgeD{background:#FEF3D8;color:#633806;}
+.star{color:#EF9F27;font-size:13px;}
+.profit-bar{display:flex;align-items:center;gap:5px;}
+.pbar-bg{flex:1;height:5px;background:#F0EEE8;border-radius:3px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:3px;}
+
+/* Compliance checklist */
+.checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.check-card{border:1px solid #E0DED6;border-radius:6px;overflow:hidden;}
+.check-card-header{padding:8px 12px;font-size:12px;font-weight:600;color:#fff;}
+.check-item{display:flex;align-items:flex-start;gap:8px;padding:7px 12px;border-bottom:1px solid #F5F4EF;font-size:12px;}
+.check-item:last-child{border-bottom:none;}
+.check-item input[type=checkbox]{margin-top:2px;accent-color:#1F4E79;flex-shrink:0;}
+.check-label{color:#2C2C2A;line-height:1.5;}
+.check-label .en{display:block;font-size:10px;color:#888780;margin-top:1px;}
+.check-status{margin-left:auto;flex-shrink:0;}
+.tag-req{font-size:10px;padding:1px 5px;border-radius:2px;background:#FCEBEB;color:#791F1F;font-weight:600;}
+.tag-opt{font-size:10px;padding:1px 5px;border-radius:2px;background:#E5F0FA;color:#0C447C;}
+.progress-row{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:11px;color:#888780;border-top:1px solid #F0EEE8;}
+.progress-track{flex:1;height:4px;background:#F0EEE8;border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:#1F4E79;border-radius:2px;transition:width .3s;}
+
+/* History */
+
+
+@media(max-width:900px){.layout{grid-template-columns:1fr;}.checklist-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="header-title" id="h-title">料源路径评估工具 · Feedstock Routing Tool</div>
+    <div class="header-sub" id="h-sub">泰国物理法 × 印尼湿法 · 路径A/B/C/D智能推荐 · 口岸合规清单</div>
+  </div>
+  <button class="lang-btn" onclick="toggleLang()">EN / 中文</button>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+
+    <!-- Feedstock type -->
+    <div class="sb-section">
+      <h2 id="lb-type">料源类型 · Feedstock Type</h2>
+      <div class="chip-group" id="typeChips">
+        <div class="chip active" data-val="scrap" onclick="selectChip('type',this)">生产废料 Scrap</div>
+        <div class="chip" data-val="blackmass" onclick="selectChip('type',this)">黑粉 Black Mass</div>
+        <div class="chip" data-val="eol_pack" onclick="selectChip('type',this)">退役电池包 EOL Pack</div>
+        <div class="chip" data-val="eol_cell" onclick="selectChip('type',this)">退役电芯 EOL Cell</div>
+        <div class="chip" data-val="mixed" onclick="selectChip('type',this)">混合废料 Mixed</div>
+      </div>
+    </div>
+
+    <!-- Chemistry -->
+    <div class="sb-section">
+      <h2 id="lb-chem">电池体系 · Chemistry</h2>
+      <div class="chip-group" id="chemChips">
+        <div class="chip active" data-val="ncm" onclick="selectChip('chem',this)">NCM / NCA</div>
+        <div class="chip" data-val="lfp" onclick="selectChip('chem',this)">LFP</div>
+        <div class="chip" data-val="mixed" onclick="selectChip('chem',this)">混合 Mixed</div>
+        <div class="chip" data-val="unknown" onclick="selectChip('chem',this)">未知 Unknown</div>
+      </div>
+    </div>
+
+    <!-- Origin country -->
+    <div class="sb-section">
+      <h2 id="lb-origin">来源国 · Origin Country</h2>
+      <div class="chip-group" id="originChips">
+        <div class="chip active" data-val="TH" onclick="selectChip('origin',this)">泰国 TH</div>
+        <div class="chip" data-val="ID" onclick="selectChip('origin',this)">印尼 ID</div>
+        <div class="chip" data-val="VN" onclick="selectChip('origin',this)">越南 VN</div>
+        <div class="chip" data-val="MY" onclick="selectChip('origin',this)">马来西亚 MY</div>
+        <div class="chip" data-val="PH" onclick="selectChip('origin',this)">菲律宾 PH</div>
+        <div class="chip" data-val="OTHER" onclick="selectChip('origin',this)">其他 Other</div>
+      </div>
+    </div>
+
+    <!-- Source type -->
+    <div class="sb-section">
+      <h2 id="lb-source">料源来源 · Source Type</h2>
+      <div class="chip-group" id="sourceChips">
+        <div class="chip active" data-val="internal" onclick="selectChip('source',this)">集团内部 Internal</div>
+        <div class="chip" data-val="oem" onclick="selectChip('source',this)">整车/电池厂 OEM</div>
+        <div class="chip" data-val="trader" onclick="selectChip('source',this)">贸易商 Trader</div>
+        <div class="chip" data-val="ev2w" onclick="selectChip('source',this)">电动两轮车 E-2W</div>
+        <div class="chip" data-val="dismantler" onclick="selectChip('source',this)">拆解场 Dismantler</div>
+      </div>
+    </div>
+
+    <!-- Composition params -->
+    <div class="sb-section">
+      <h2 id="lb-comp">成分参数 · Composition</h2>
+      <div class="slider-field">
+        <label id="lb-ni">镍+钴+锰 Ni+Co+Mn %<span id="ncmPctLbl">35%</span></label>
+        <input type="range" id="ncmPct" min="0" max="60" value="35" oninput="document.getElementById('ncmPctLbl').textContent=this.value+'%';evaluate()">
+      </div>
+      <div class="slider-field">
+        <label id="lb-li">锂含量 Li %<span id="liPctLbl">4%</span></label>
+        <input type="range" id="liPct" min="0" max="12" value="4" oninput="document.getElementById('liPctLbl').textContent=this.value+'%';evaluate()">
+      </div>
+      <div class="slider-field">
+        <label id="lb-imp">杂质 Cu+Al %<span id="impPctLbl">5%</span></label>
+        <input type="range" id="impPct" min="0" max="20" value="5" oninput="document.getElementById('impPctLbl').textContent=this.value+'%';evaluate()">
+      </div>
+      <div class="slider-field">
+        <label id="lb-vol">预估批量 Est. Volume<span id="volLbl">50t</span></label>
+        <input type="range" id="vol" min="1" max="500" value="50" oninput="document.getElementById('volLbl').textContent=this.value+'t';evaluate()">
+      </div>
+    </div>
+
+    <!-- Market params -->
+    <div class="sb-section">
+      <h2 id="lb-mkt">市场参数 · Market Params</h2>
+      <div class="field">
+        <label id="lb-liprice">碳酸锂现价 Li₂CO₃ (元/t)</label>
+        <input type="number" id="liPrice" value="145000" step="1000" oninput="evaluate()">
+      </div>
+      <div class="field">
+        <label id="lb-niprice">硫酸镍现价 NiSO₄ (元/t)</label>
+        <input type="number" id="niPrice" value="27000" step="500" oninput="evaluate()">
+      </div>
+      <div class="field">
+        <label id="lb-opex">处理成本 OPEX (元/t)</label>
+        <input type="number" id="opex" value="11000" step="500" oninput="evaluate()">
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <button class="btn" onclick="evaluate()">重新评估 · Re-evaluate</button>
+      <button class="btn btn-green" onclick="exportCSV()">导出记录 · Export CSV</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- Recommendation banner -->
+    <div id="recBanner" class="rec-banner pathA">
+      <div class="rec-badge pathA" id="recBadge">A</div>
+      <div class="rec-text">
+        <h3 id="recTitle">推荐路径：集团内部循环路径</h3>
+        <p id="recDesc">Recommended Path: Internal Closed-loop</p>
+        <div class="rec-reason" id="recReason">—</div>
+      </div>
+    </div>
+
+    <!-- Path comparison -->
+    <div class="section">
+      <div class="section-header">
+        <h3 id="lb-compare">四条路径收益对比 · Path Comparison</h3>
+        <span style="font-size:11px;color:#888780" id="lb-rec-mark">★ 推荐路径</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th id="th-path">路径</th>
+            <th id="th-name">名称</th>
+            <th id="th-profit">预估收益（元/吨）</th>
+            <th id="th-risk">风险</th>
+            <th id="th-timeline">周期</th>
+            <th id="th-suitable">适合本批</th>
+          </tr>
+        </thead>
+        <tbody id="pathTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Compliance checklist -->
+    <div class="section">
+      <div class="section-header">
+        <h3 id="lb-checklist">口岸合规单证清单 · Port Compliance Checklist</h3>
+        <span style="font-size:11px;color:#888780" id="lb-checkprogress">0 / 0 已确认</span>
+      </div>
+      <div class="checklist-grid" id="checklistGrid"></div>
+    </div>
+
+
+
+  </div>
+</div>
+
+<script>
+let lang='zh';
+let sel={type:'scrap',chem:'ncm',origin:'TH',source:'internal'};
+
+const T={
+  zh:{
+    pathNames:{A:'集团内部循环路径',B:'区域资源归集路径',C:'矿产与回收协同路径',D:'副产品属地变现路径'},
+    pathDescs:{
+      A:'Internal Closed-loop · 优先保障集团内部废料闭环处置，合规风险最低',
+      B:'Regional Aggregation · 通过泰国枢纽合规转换，向全球贸易市场出售',
+      C:'Value Synergy · 再生料+原生矿混合提纯，构建低碳竞争优势',
+      D:'By-product Valorization · 铜铝等副产物属地快速变现，对冲运营成本'
+    },
+    risks:{A:'低 Low',B:'中 Med',C:'中高 Med-H',D:'低 Low'},
+    timelines:{A:'即时 Immediate',B:'2–4周',C:'4–8周',D:'即时 Immediate'},
+    typeNames:{scrap:'生产废料',blackmass:'黑粉',eol_pack:'退役电池包',eol_cell:'退役电芯',mixed:'混合废料'},
+  }
+};
+
+// Compliance checklist data by origin country
+const CHECKLISTS={
+  TH:{
+    label:'泰国 Thailand',color:'#1F4E79',
+    items:[
+      {text:'DIW 106号危废处置执照',en:'DIW Factory Type 106 License',req:true},
+      {text:'E-fully Manifest 电子联单（Kor Orr 1）',en:'E-Manifest / Kor Orr 1 Approval',req:true},
+      {text:'MSDS 安全数据表（GHS第九版）',en:'MSDS / Safety Data Sheet (GHS Rev.9)',req:true},
+      {text:'SGS/TÜV 成分分析报告（COA）',en:'COA from accredited lab (SGS/TÜV)',req:true},
+      {text:'非危废认定报告（DIW出具）',en:'Non-Hazardous Determination (DIW)',req:false},
+      {text:'Form D 东盟原产地证明（出口用）',en:'Form D – ASEAN Certificate of Origin',req:false},
+      {text:'iSingle Form 年度废物管理报告',en:'Annual Waste Report via iSingle Form',req:false},
+    ]
+  },
+  ID:{
+    label:'印尼 Indonesia',color:'#C55A11',
+    items:[
+      {text:'B3危险废物出口许可（KLHK）',en:'B3 Hazardous Waste Export Permit (KLHK)',req:true},
+      {text:'NIB 企业登记证（OSS系统）',en:'NIB Business License via OSS',req:true},
+      {text:'MSDS + COA 成分报告',en:'MSDS + COA from accredited lab',req:true},
+      {text:'AMDAL 环评批文（湿法厂）',en:'AMDAL Environmental Impact Approval',req:true},
+      {text:'巴塞尔公约 PIC 事先知情同意',en:'Basel Convention PIC Notification',req:false},
+      {text:'出口附加税（BK）资质核查',en:'Export Levy (BK) Compliance Check',req:false},
+    ]
+  },
+  VN:{
+    label:'越南 Vietnam',color:'#2E7D32',
+    items:[
+      {text:'工业部再生利用证明',en:'MOIT Recycling Authorization Certificate',req:true},
+      {text:'MSDS + COA 成分报告',en:'MSDS + COA from accredited lab',req:true},
+      {text:'以"工业原料"名义出口（非废料）',en:'Export as Industrial Raw Material (not waste)',req:true},
+      {text:'巴塞尔公约 PIC（若以危废名义）',en:'Basel PIC (if classified as hazardous)',req:false},
+      {text:'海防/凯莱港预申报',en:'Pre-declaration at Haiphong / Cat Lai',req:false},
+    ]
+  },
+  MY:{
+    label:'马来西亚 Malaysia',color:'#534AB7',
+    items:[
+      {text:'Full Recovery License（全项回收牌照）',en:'Full Recovery License (DOE)',req:true},
+      {text:'Scheduled Waste SW 103 合规申报',en:'Scheduled Waste SW 103 Declaration',req:true},
+      {text:'DOE 物料预备案（4–6周）',en:'DOE Material Pre-registration (4–6 wks)',req:true},
+      {text:'MSDS + COA（HS 3824.99核查）',en:'MSDS + COA for HS 3824.99 verification',req:true},
+      {text:'巴塞尔公约 PIC（如适用）',en:'Basel PIC if applicable',req:false},
+    ]
+  },
+  PH:{
+    label:'菲律宾 Philippines',color:'#85B7EB',
+    items:[
+      {text:'DENR 危废转移许可',en:'DENR Hazardous Waste Transport Permit',req:true},
+      {text:'MSDS + COA 成分报告',en:'MSDS + COA from accredited lab',req:true},
+      {text:'巴塞尔公约 PIC 申请',en:'Basel Convention PIC Notification',req:true},
+      {text:'BOC 海关预申报',en:'BOC Pre-customs Declaration',req:false},
+    ]
+  },
+  OTHER:{
+    label:'其他地区 Other',color:'#888780',
+    items:[
+      {text:'巴塞尔公约 PIC 事先知情同意',en:'Basel Convention PIC Notification',req:true},
+      {text:'MSDS + COA 成分报告',en:'MSDS + COA from accredited lab',req:true},
+      {text:'危废跨境转移申请',en:'Cross-border Hazardous Waste Transfer Application',req:true},
+      {text:'目的地国进口许可',en:'Import Permit from Destination Country',req:false},
+    ]
+  }
+};
+
+// Destination compliance (China import)
+const CN_CHECKLIST={
+  label:'中国进口要求 China Import',color:'#1F4E79',
+  items:[
+    {text:'Ni+Co+Mn ≥ 35%（SN/T 5937-2025）',en:'Ni+Co+Mn ≥ 35% (SN/T 5937-2025)',req:true},
+    {text:'Li ≥ 3.5%',en:'Li ≥ 3.5%',req:true},
+    {text:'Cu ≤ 2%，Al ≤ 5%，水分 ≤ 2%',en:'Cu ≤ 2%, Al ≤ 5%, Moisture ≤ 2%',req:true},
+    {text:'CNAS/ILAC 资质检测报告',en:'CNAS/ILAC Accredited Test Report',req:true},
+    {text:'HS 编码 3824.99.99.96（黑粉）',en:'HS Code 3824.99.99.96 (Black Mass)',req:true},
+    {text:'SDS（UN 3077）',en:'SDS with UN 3077 Classification',req:true},
+  ]
+};
+
+function selectChip(group,el){
+  document.querySelectorAll('#'+group+'Chips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  sel[group]=el.dataset.val;
+  evaluate();
+}
+
+function getVal(id){return parseFloat(document.getElementById(id).value)||0;}
+
+function evaluate(){
+  const ncmPct=getVal('ncmPct'), liPct=getVal('liPct'), impPct=getVal('impPct');
+  const vol=getVal('vol'), liPrice=getVal('liPrice'), niPrice=getVal('niPrice'), opex=getVal('opex');
+
+  // Compliance check
+  const ncmOk = ncmPct>=35, liOk = liPct>=3.5, impOk = impPct<=7;
+  const complianceOk = ncmOk && liOk && impOk;
+
+  // Estimated value per tonne of input
+  const li2co3Conv=5.32, nisoConv=4.48;
+  const liVal=(liPct/100)*0.92*li2co3Conv*liPrice;
+  const niVal=(ncmPct/100)*0.5*0.98*nisoConv*niPrice;
+  const baseValue=liVal+niVal;
+
+  // Path profit estimates
+  const profits={
+    A: Math.round(baseValue*0.75 - opex*0.8),
+    B: complianceOk ? Math.round(baseValue*0.78 - opex) : Math.round(baseValue*0.5 - opex*1.3),
+    C: Math.round(baseValue*0.85 - opex*1.1),
+    D: Math.round((impPct/100)*vol*1000*18000/vol)
+  };
+
+  // Recommendation logic
+  let rec='A', reason='';
+  if(sel.source==='internal'){
+    rec='A';
+    reason=lang==='zh'
+      ? '料源为集团内部废料，优先走内部闭环路径，合规风险最低，且可直接对接集团前驱体产线。'
+      : 'Internal feedstock – prioritize closed-loop path. Lowest compliance risk, direct feed to group precursor line.';
+  } else if(!complianceOk){
+    rec='D';
+    reason=lang==='zh'
+      ? `成分不达标（Ni+Co+Mn=${ncmPct}%，Li=${liPct}%），无法直接出口中国。建议属地处置副产物变现，或在泰国基地预处理达标后再走路径B。`
+      : `Composition below threshold (Ni+Co+Mn=${ncmPct}%, Li=${liPct}%). Cannot export to China directly. Process locally or pre-treat to meet standard before Path B.`;
+  } else if(sel.origin==='ID' && sel.type!=='blackmass'){
+    rec='C';
+    reason=lang==='zh'
+      ? '来源印尼且已有本地镍矿资源，适合走矿产与回收协同路径，混合配比可降低综合碳足迹，构建绿色溢价。'
+      : 'Indonesian origin with local nickel ore access. Path C (primary + secondary blending) reduces carbon footprint and enables green premium.';
+  } else if(complianceOk && vol>=30){
+    rec='B';
+    reason=lang==='zh'
+      ? `成分达标（Ni+Co+Mn=${ncmPct}%，Li=${liPct}%），批量${vol}t，可通过泰国枢纽完成定性转换后出口或回国处理，利润空间最大。`
+      : `Composition compliant (Ni+Co+Mn=${ncmPct}%, Li=${liPct}%), volume ${vol}t. Route via Thailand Hub for characterization, then export or ship to China. Best margin.`;
+  } else {
+    rec='B';
+    reason=lang==='zh'
+      ? '成分达标，建议经泰国枢纽定性转换后进入区域贸易网络。'
+      : 'Composition compliant. Route via Thailand Hub for formal characterization, then regional trade.';
+  }
+
+  // Update banner
+  const pathColors={A:'pathA',B:'pathB',C:'pathC',D:'pathD'};
+  const pathNamesZh={A:'路径A：集团内部循环路径',B:'路径B：区域资源归集路径',C:'路径C：矿产与回收协同路径',D:'路径D：副产品属地变现路径'};
+  const pathNamesEn={A:'Path A: Internal Closed-loop',B:'Path B: Regional Aggregation',C:'Path C: Value Synergy',D:'Path D: By-product Valorization'};
+  const banner=document.getElementById('recBanner');
+  banner.className='rec-banner '+pathColors[rec];
+  document.getElementById('recBadge').className='rec-badge '+pathColors[rec];
+  document.getElementById('recBadge').textContent=rec;
+  document.getElementById('recTitle').textContent=lang==='zh'?pathNamesZh[rec]:pathNamesEn[rec];
+  document.getElementById('recDesc').textContent=lang==='zh'?pathNamesEn[rec]:pathNamesZh[rec];
+  document.getElementById('recReason').textContent=reason;
+
+  // Path table
+  const maxProfit=Math.max(...Object.values(profits));
+  const rows=['A','B','C','D'].map(p=>{
+    const isRec=p===rec;
+    const pct=Math.max(0,Math.round((profits[p]/maxProfit)*100));
+    const suitability=p===rec?'★★★ 推荐':profits[p]>0?'★★ 可选':'★ 不建议';
+    return `<tr class="${isRec?'recommended':''}">
+      <td><span class="path-badge badge${p}">${p}</span></td>
+      <td style="font-size:12px;color:#2C2C2A">${lang==='zh'?T.zh.pathNames[p]:T.zh.pathNames[p]}</td>
+      <td><div class="profit-bar"><div class="pbar-bg"><div class="pbar-fill" style="width:${pct}%;background:${profits[p]>0?'#639922':'#E24B4A'}"></div></div><span style="font-size:11px;min-width:60px;color:${profits[p]>0?'#27500A':'#A32D2D'}">${profits[p].toLocaleString()}</span></div></td>
+      <td style="font-size:11px;color:#5F5E5A">${T.zh.risks[p]}</td>
+      <td style="font-size:11px;color:#5F5E5A">${T.zh.timelines[p]}</td>
+      <td style="font-size:12px;font-weight:600;color:${isRec?'#1F4E79':'#888780'}">${suitability}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('pathTable').innerHTML=rows;
+
+  // Checklist
+  renderChecklist();
+
+  return {rec, profits, ncmPct, liPct, vol, type:sel.type, origin:sel.origin};
+}
+
+function renderChecklist(){
+  const origin=sel.origin;
+  const originData=CHECKLISTS[origin];
+  let html='';
+
+  // Origin country checklist
+  const originId='cl-'+origin;
+  html+=`<div class="check-card">
+    <div class="check-card-header" style="background:${originData.color}">${originData.label} — 出口要求 Export</div>`;
+  originData.items.forEach((item,i)=>{
+    html+=`<div class="check-item">
+      <input type="checkbox" id="${originId}-${i}" onchange="updateProgress()">
+      <div class="check-label">${item.text}<span class="en">${item.en}</span></div>
+      <div class="check-status"><span class="${item.req?'tag-req':'tag-opt'}">${item.req?'必须 REQ':'建议 OPT'}</span></div>
+    </div>`;
+  });
+  html+=`<div class="progress-row"><span id="prog-${origin}">0/${originData.items.length}</span><div class="progress-track"><div class="progress-fill" id="pbar-${origin}" style="width:0%"></div></div></div>`;
+  html+='</div>';
+
+  // China import checklist
+  html+=`<div class="check-card">
+    <div class="check-card-header" style="background:#1F4E79">${CN_CHECKLIST.label} — 进口要求 Import</div>`;
+  CN_CHECKLIST.items.forEach((item,i)=>{
+    html+=`<div class="check-item">
+      <input type="checkbox" id="cl-cn-${i}" onchange="updateProgress()">
+      <div class="check-label">${item.text}<span class="en">${item.en}</span></div>
+      <div class="check-status"><span class="${item.req?'tag-req':'tag-opt'}">${item.req?'必须 REQ':'建议 OPT'}</span></div>
+    </div>`;
+  });
+  html+=`<div class="progress-row"><span id="prog-cn">0/${CN_CHECKLIST.items.length}</span><div class="progress-track"><div class="progress-fill" id="pbar-cn" style="width:0%"></div></div></div>`;
+  html+='</div>';
+
+  document.getElementById('checklistGrid').innerHTML=html;
+  updateProgress();
+}
+
+function updateProgress(){
+  const origin=sel.origin;
+  const originItems=CHECKLISTS[origin].items;
+  let checkedOrigin=0;
+  originItems.forEach((_,i)=>{
+    if(document.getElementById('cl-'+origin+'-'+i)?.checked) checkedOrigin++;
+  });
+  let checkedCn=0;
+  CN_CHECKLIST.items.forEach((_,i)=>{
+    if(document.getElementById('cl-cn-'+i)?.checked) checkedCn++;
+  });
+  const total=originItems.length+CN_CHECKLIST.items.length;
+  const totalChecked=checkedOrigin+checkedCn;
+  document.getElementById('lb-checkprogress').textContent=`${totalChecked} / ${total} 已确认 Confirmed`;
+  const pb=document.getElementById('pbar-'+origin);
+  if(pb) pb.style.width=Math.round(checkedOrigin/originItems.length*100)+'%';
+  const pbc=document.getElementById('pbar-cn');
+  if(pbc) pbc.style.width=Math.round(checkedCn/CN_CHECKLIST.items.length*100)+'%';
+  const sp=document.getElementById('prog-'+origin);
+  if(sp) sp.textContent=`${checkedOrigin}/${originItems.length}`;
+  const spc=document.getElementById('prog-cn');
+  if(spc) spc.textContent=`${checkedCn}/${CN_CHECKLIST.items.length}`;
+}
+
+
+
+function toggleLang(){
+  lang=lang==='zh'?'en':'zh';
+  evaluate();
+}
+
+evaluate();
+</script>
+</body>
+</html>
